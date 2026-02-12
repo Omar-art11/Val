@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nuestra Canción</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:ital@1&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --green:#1db954;
+  --pink:#ff6fae;
+  --text:#fff;
+  --muted:#aaa;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:#000;
+  font-family:'Inter',sans-serif;
+  color:var(--text);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.player{
+  width:360px;
+  background:linear-gradient(180deg,#1a1a1a,#0d0d0d);
+  padding:26px;
+  border-radius:22px;
+  box-shadow:0 30px 60px rgba(0,0,0,.8);
+  z-index:1;
+}
+
+.cover{
+  width:100%;
+  aspect-ratio:1/1;
+  border-radius:18px;
+  background:linear-gradient(135deg,#ff8fc7,#ff4f9a);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:52px;
+}
+
+.song-info{text-align:center;margin-top:16px}
+.song-title{font-size:20px;font-weight:600}
+.artist{font-size:14px;color:var(--muted);font-style:italic;margin-top:6px}
+
+.progress{margin-top:22px}
+
+.bar{
+  height:6px;
+  background:#333;
+  border-radius:3px;
+  position:relative;
+}
+
+.bar-fill{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,var(--green),var(--pink));
+  border-radius:3px;
+}
+
+.thumb{
+  position:absolute;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:14px;
+  height:14px;
+  background:#fff;
+  border-radius:50%;
+  left:0%;
+}
+
+.time{
+  display:flex;
+  justify-content:space-between;
+  font-size:12px;
+  color:var(--muted);
+  margin-top:6px;
+}
+
+.controls{
+  display:flex;
+  justify-content:center;
+  gap:14px;
+  margin:18px 0;
+}
+
+.btn{
+  width:60px;
+  height:60px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  user-select:none;
+}
+
+.play{background:var(--green);font-size:26px}
+.speed{background:#333}
+.speed.active{background:var(--pink);color:#000}
+
+.lyrics{
+  font-family:'Playfair Display',serif;
+  font-size:16px;
+  line-height:1.9;
+  text-align:center;
+  min-height:160px;
+  white-space:pre-line;
+}
+
+#hearts{
+  position:fixed;
+  inset:0;
+  z-index:0;
+}
+
+@keyframes shine {
+  0% { background-position: -200px; }
+  100% { background-position: 200px; }
+}
+
+#loveBtn{
+  margin-top:18px;
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:30px;
+  font-size:16px;
+  font-weight:600;
+  background:linear-gradient(90deg,#ff6fae,#ffb6d9);
+  color:#000;
+  cursor:pointer;
+  opacity:0;
+  transform:translateY(20px);
+  transition:all .6s ease;
+  box-shadow:0 0 20px rgba(255,105,180,.4);
+}
+
+#loveBtn.show{
+  opacity:1;
+  transform:translateY(0);
+}
+
+#loveBtn:hover{
+  box-shadow:0 0 30px rgba(255,105,180,.8);
+}
+
+#finalMessage{
+  margin-top:16px;
+  text-align:center;
+  font-family:'Playfair Display',serif;
+  font-size:17px;
+  opacity:0;
+  transition:opacity .8s ease;
+}
+
+#finalMessage.show{
+  opacity:1;
+}
+
+#finalMessage {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+  margin-top: 15px;
+}
+
+#finalMessage.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+</style>
+</head>
+
+<body>
+
+<canvas id="hearts"></canvas>
+
+<div class="player">
+  <div class="cover">💗</div>
+
+  <div class="song-info">
+    <div class="song-title">Una Historia Ya Escrita</div>
+    <div class="artist">Chispita & Cerillo</div>
+  </div>
+
+  <div class="progress">
+    <div class="bar" id="barBg">
+      <div class="bar-fill" id="bar"></div>
+      <div class="thumb" id="thumb"></div>
+    </div>
+    <div class="time">
+      <span id="current">0:00</span>
+      <span>1:23</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="btn play" id="play">▶</div>
+    <div class="btn speed" id="speed">x2</div>
+  </div>
+
+  <div class="lyrics" id="lyrics">Toca ▶ para empezar</div>
+
+<button id="loveBtn">El ultimo secreto...</button>
+
+<div id="finalMessage">
+  Y así, el cuento no terminó…
+porque algunos amores
+no se escriben para cerrar,
+sino para continuar.
+</div>
+
+</div>
+
+<script>
+const lyricsData = [
+  { t: 0,  text: "Había una vez —no en un castillo ni en un reino lejano— sino en el camino mismo, una princesa sin corona." },
+  { t: 7,  text: "No la necesitaba. Su realeza vivía en la forma en que caminaba, en cómo observaba el mundo," },
+  { t: 14, text: "en la serenidad con la que avanzaba entre estaciones, decisiones y destinos que parecían pequeños, pero no lo eran." },
+
+  { t: 22, text: "El destino, que casi nunca hace ruido, la miraba desde lejos." },
+  { t: 27, text: "No la empujaba ni la apresuraba. Solo esperaba." },
+  { t: 32, text: "Porque el destino sabe que los encuentros verdaderos no se fuerzan; se alinean." },
+
+  { t: 40, text: "Un día, en un trayecto cualquiera, apareció alguien más." },
+  { t: 45, text: "No era un príncipe de cuentos, pero llevaba algo igual de valioso:" },
+  { t: 50, text: "la sensibilidad de reconocer lo extraordinario en lo simple." },
+  { t: 56, text: "Sus caminos ya estaban escritos para cruzarse… y aun así, sin que ellos mismos lo supieran, coincidieron." },
+
+  { t: 64, text: "No hubo promesas ni grandes palabras. Solo un gesto. Un espacio compartido." },
+  { t: 70, text: "Un silencio que no incomodó, que abrazó." },
+  { t: 74, text: "Y en ese instante breve —casi invisible para el mundo— dos almas se reconocieron sin saberlo.", vibe: true },
+
+  { t: 79, text: "La conexión nació en un instante, pero nunca fue pasajera." },
+  { t: 82, text: "Porque el destino ya había decidido más… juntar lo que siempre estuvo destinado a caminar junto.", final: true }
+];
+
+const totalTime = 83;
+
+let currentTime = 0;
+let playing = false;
+let speed = 1;
+let dragging = false;
+let interval;
+
+const lyrics = document.getElementById("lyrics");
+const playBtn = document.getElementById("play");
+const speedBtn = document.getElementById("speed");
+const bar = document.getElementById("bar");
+const thumb = document.getElementById("thumb");
+const barBg = document.getElementById("barBg");
+const current = document.getElementById("current");
+
+playBtn.onclick = () => {
+  playing = !playing;
+  playBtn.textContent = playing ? "⏸" : "▶";
+  if (playing) start();
+  else stop();
+};
+
+speedBtn.onclick = () => {
+  speed = speed === 1 ? 2 : 1;
+  speedBtn.classList.toggle("active");
+};
+
+function start(){
+  stop();
+  interval = setInterval(() => {
+    if (!dragging) {
+      currentTime += speed;
+      if (currentTime >= totalTime) {
+        currentTime = totalTime;
+        stop();
+      }
+      updateUI();
+    }
+  }, 1000);
+}
+
+function stop(){
+  clearInterval(interval);
+}
+
+function updateUI(){
+  const progress = currentTime / totalTime;
+  bar.style.width = progress * 100 + "%";
+  thumb.style.left = progress * 100 + "%";
+  current.textContent = format(currentTime);
+  renderLyrics();
+}
+
+let lastRenderedIndex = -1;
+
+function renderLyrics(){
+  lyrics.innerHTML = "";
+
+  lyricsData.forEach((line, index) => {
+    if (currentTime >= line.t) {
+
+      const div = document.createElement("div");
+      div.textContent = line.text;
+
+      // 💓 vibración romántica
+      if (line.vibe && lastRenderedIndex !== index) {
+        navigator.vibrate?.([80, 40, 80]);
+      }
+
+      // ✨ brillo final
+      if (line.final) {
+        div.style.background = "linear-gradient(90deg,#ff6fae,#ffffff,#ff6fae)";
+        div.style.webkitBackgroundClip = "text";
+        div.style.webkitTextFillColor = "transparent";
+        div.style.animation = "shine 3s infinite linear";
+      }
+
+      lyrics.appendChild(div);
+      lyrics.appendChild(document.createElement("br"));
+
+      lastRenderedIndex = index;
+    }
+  });
+}
+
+barBg.addEventListener("pointerdown", e => {
+  dragging = true;
+  seek(e);
+});
+
+window.addEventListener("pointermove", e => {
+  if (dragging) seek(e);
+});
+
+window.addEventListener("pointerup", () => dragging = false);
+
+function seek(e){
+  const rect = barBg.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const percent = Math.min(Math.max(x / rect.width, 0), 1);
+  currentTime = Math.round(percent * totalTime);
+  updateUI();
+}
+
+function format(sec){
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s < 10 ? "0"+s : s}`;
+}
+
+lyrics.textContent = "Toca ▶ para empezar";
+
+const loveBtn = document.getElementById("loveBtn");
+const finalMessage = document.getElementById("finalMessage");
+
+// Mostrar botón en los últimos segundos
+function checkFinalMoment(){
+  if(currentTime >= 82){
+    loveBtn.classList.add("show");
+  } else {
+    loveBtn.classList.remove("show");
+    finalMessage.classList.remove("show");
+  }
+}
+
+// Modificamos updateUI para incluirlo
+const originalUpdateUI = updateUI;
+updateUI = function(){
+  originalUpdateUI();
+  checkFinalMoment();
+};
+
+// Acción del botón
+loveBtn.onclick = () => {
+  navigator.vibrate?.([100,50,100]);
+
+  finalMessage.classList.toggle("show");
+
+  if(finalMessage.classList.contains("show")){
+    loveBtn.textContent = "💞Del destino💞";
+  } else {
+    loveBtn.textContent = "El ultimo secreto...";
+  }
+};
+
+</script>
+
+
+<script>
+/* 💕 Corazones */
+const c=document.getElementById("hearts");
+const ctx=c.getContext("2d");
+let w,h,hearts=[];
+
+function resize(){
+  w=c.width=innerWidth;
+  h=c.height=innerHeight;
+}
+resize(); window.onresize=resize;
+
+for(let i=0;i<50;i++){
+  hearts.push({
+    x:Math.random()*w,
+    y:Math.random()*h,
+    s:Math.random()*1.5+0.5
+  });
+}
+
+function draw(){
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="rgba(255,105,180,.6)";
+  hearts.forEach(hh=>{
+    ctx.font="16px serif";
+    ctx.fillText("❤",hh.x,hh.y);
+    hh.y+=hh.s;
+    if(hh.y>h) hh.y=0;
+  });
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+
+</body>
+</html>
